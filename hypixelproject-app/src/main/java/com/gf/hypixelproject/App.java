@@ -15,6 +15,7 @@ import com.gf.hypixelproject.gsonModels.ItemsModel;
 import com.gf.hypixelproject.gsonModels.ProfilesModel;
 import com.gf.hypixelproject.gsonModels.UuidModel;
 import com.gf.hypixelproject.gsonModels.ItemsDataModel;
+import io.github.cdimascio.dotenv.Dotenv;
 
 /**
  * Hello world!
@@ -26,8 +27,15 @@ public class App
         Scanner sc = new Scanner(System.in);
         System.out.print("Enter Minecraft username: ");
         String userName = sc.nextLine();
-        HypixelApiKey apiKey = new HypixelApiKey(); // api key for hypixel gets
         
+        //======= load api key from .env === //
+        Dotenv dotenv = Dotenv.configure()
+            .directory("hypixelproject-app/")
+            .load();
+        String hypixelKey = dotenv.get("HYPIXEL_API_KEY");
+        System.out.println("Hypixel key: " + hypixelKey);
+        //=================================== //
+
         System.out.print("Enter Profile Name: ");
         String profile = sc.nextLine();
 
@@ -49,8 +57,8 @@ public class App
             URI minecraftUrl = new URI(url);
             
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(minecraftUrl)
-                    .build();
+                .uri(minecraftUrl)
+                .build();
 
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             String body = response.body();
@@ -73,9 +81,9 @@ public class App
             URI profileUrl = new URI(url); 
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(profileUrl)
-                    .header("API-key", apiKey.getApiKey())
-                    .build();
+                .uri(profileUrl)
+                .header("API-key", hypixelKey)
+                .build();
 
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             String body = response.body();
@@ -102,9 +110,9 @@ public class App
             URI itemsUrl = new URI("https://api.hypixel.net/resources/skyblock/items");
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(itemsUrl)
-                    .header("API-key", apiKey.getApiKey())
-                    .build();
+                .uri(itemsUrl)
+                .header("API-key", hypixelKey)
+                .build();
 
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             String body = response.body();
@@ -144,9 +152,9 @@ public class App
            URI playerMuseumUrl = new URI(url);
 
            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(playerMuseumUrl)
-                    .header("API-key", apiKey.getApiKey())
-                    .build();
+                .uri(playerMuseumUrl)
+                .header("API-key", hypixelKey)
+                .build();
 
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             String body = response.body();
