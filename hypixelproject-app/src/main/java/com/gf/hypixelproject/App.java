@@ -7,8 +7,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.gf.hypixelproject.gsonModels.ItemsModel;
@@ -118,13 +121,16 @@ public class App
             String body = response.body();
             allItems = gson.fromJson(body, ItemsModel.class);
 
-            for (int i = 0; i < allItems.items.length; i++) { // maybe change naming little confusing
+            Set<String> setA = new HashSet<>();
+            for (int i = 0; i < allItems.items.length; i++) { // maybe change naming little confusing (changed maybe change again idk)
                 if (allItems.items[i].museum_data != null && !allItems.items[i].museum_data.type.equals("ARMOR_SETS")) {
-                    System.out.println(allItems.items[i].name + " | XP: " + allItems.items[i].museum_data.donation_xp);
+                    System.out.println(allItems.items[i].name + " | XP: " + allItems.items[i].museum_data.donation_xp);   // remove print 
+                    setA.add(allItems.items[i].name);
                 } else if (allItems.items[i].museum_data != null) {
                     for (Map.Entry<String, Integer> entry : allItems.items[i].museum_data.armor_set_donation_xp.entrySet()) {
-                        System.out.println(allItems.items[i].name + " | Set: " + entry.getKey() + " | XP: " + entry.getValue());
+                        System.out.println(allItems.items[i].name + " | Set: " + entry.getKey() + " | XP: " + entry.getValue());  // remove print 
                         // Makes a map entry and set it to the entry set of the given item
+                        setA.add(entry.getKey());
                     }
                 }
                 // Armor sets dont have regular donation xp they have set xp, 
@@ -139,6 +145,9 @@ public class App
                 // Now merge both sets into one hash map to get all musuem items with their given set name (if exist) and xp
                 // if it has armor_set_donation_xp then map that to the set name else if it has donation_xp then map it to the item name 
             }
+            for (String str : setA) {
+                System.out.println(str);
+            } 
         } catch (URISyntaxException | IOException | InterruptedException e) {
             System.err.println(e.getMessage());
         }
@@ -158,7 +167,7 @@ public class App
 
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
             String body = response.body();
-            // no array in the api call maybe make and fill one here with the items 
+            // parse  
 
         } catch (URISyntaxException | IOException | InterruptedException e) {
             System.err.println(e.getMessage());
