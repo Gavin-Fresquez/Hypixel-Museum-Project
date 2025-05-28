@@ -1,6 +1,7 @@
 package com.gf.hypixelproject;
 
 import java.io.IOException;
+import java.lang.reflect.Member;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -11,10 +12,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.gf.hypixelproject.gsonModels.ItemsModel;
+import com.gf.hypixelproject.gsonModels.MembersModel;
+import com.gf.hypixelproject.gsonModels.DonatedItemsModel; 
 import com.gf.hypixelproject.gsonModels.ProfilesModel;
 import com.gf.hypixelproject.gsonModels.UuidModel;
 import com.gf.hypixelproject.gsonModels.ItemsDataModel;
@@ -108,6 +110,7 @@ public class App
         // ===========================================================
         // get all items that have museum data and store them in a map
         ItemsModel allItems = new ItemsModel();
+        Set<String> setA = new HashSet<>();
         try {
 
             URI itemsUrl = new URI("https://api.hypixel.net/resources/skyblock/items");
@@ -121,14 +124,13 @@ public class App
             String body = response.body();
             allItems = gson.fromJson(body, ItemsModel.class);
 
-            Set<String> setA = new HashSet<>();
             for (int i = 0; i < allItems.items.length; i++) { // maybe change naming little confusing (changed maybe change again idk)
                 if (allItems.items[i].museum_data != null && !allItems.items[i].museum_data.type.equals("ARMOR_SETS")) {
-                    System.out.println(allItems.items[i].name + " | XP: " + allItems.items[i].museum_data.donation_xp);   // remove print 
-                    setA.add(allItems.items[i].name);
+                    // System.out.println(allItems.items[i].name + " | XP: " + allItems.items[i].museum_data.donation_xp);   // remove print 
+                    setA.add(allItems.items[i].id);
                 } else if (allItems.items[i].museum_data != null) {
                     for (Map.Entry<String, Integer> entry : allItems.items[i].museum_data.armor_set_donation_xp.entrySet()) {
-                        System.out.println(allItems.items[i].name + " | Set: " + entry.getKey() + " | XP: " + entry.getValue());  // remove print 
+                        // System.out.println(allItems.items[i].name + " | Set: " + entry.getKey() + " | XP: " + entry.getValue());  // remove print 
                         // Makes a map entry and set it to the entry set of the given item
                         setA.add(entry.getKey());
                     }
@@ -146,7 +148,7 @@ public class App
                 // if it has armor_set_donation_xp then map that to the set name else if it has donation_xp then map it to the item name 
             }
             for (String str : setA) {
-                System.out.println(str);
+              //  System.out.println(str);
             } 
         } catch (URISyntaxException | IOException | InterruptedException e) {
             System.err.println(e.getMessage());
@@ -154,7 +156,8 @@ public class App
         
         // ===========================================================
         // compare to usernames museum and get missing items
-
+        MembersModel membersModel = new MembersModel();
+        Set<String> setB = new HashSet<>();
         try {
            // need to get players musuem items stored in a map then compare to the allItems map
            String url = "https://api.hypixel.net/v2/skyblock/museum?profile=" + userProfileId;
@@ -166,9 +169,32 @@ public class App
                 .build();
 
             HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
-            String body = response.body();
-            // parse  
+            String body = response.body();  
+            membersModel = gson.fromJson(body, MembersModel.class);
+            // check how to do if multiple memberes donated items (use refraction on apple) (it works)
+            // add for to add to setB
+            // Only need member IDs and item names
+            for (Map.Entry<String, DonatedItemsModel> entry : membersModel.members.entrySet()) {
+                String memberId = entry.getKey();
+                DonatedItemsModel donated = entry.getValue();
 
+                // System.out.println("Member ID: " + memberId);
+                // System.out.println("Items:");
+                for (String itemName : donated.items.keySet()) {
+                    // System.out.println(" - " + itemName);
+                    setB.add(itemName);
+                }
+            }
+
+            for (String str : setB) {
+               // System.out.println(str);
+            }
+
+        setA.removeAll(setB); // removes items the player/s have donated 
+        
+        for (String str : setA) {
+            System.out.println(str);
+        }
         } catch (URISyntaxException | IOException | InterruptedException e) {
             System.err.println(e.getMessage());
         }
