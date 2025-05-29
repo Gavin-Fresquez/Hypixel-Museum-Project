@@ -9,6 +9,9 @@ public class MuseumDataModel {
     // donation xp for all armor sets (Maps the armor set to donation xp amount)
     public Map<String, Integer> armor_set_donation_xp;
 
+    // Map to see the items parent 
+    public Map<String, String> parent;
+
     // type of item 
     public String type;
 }

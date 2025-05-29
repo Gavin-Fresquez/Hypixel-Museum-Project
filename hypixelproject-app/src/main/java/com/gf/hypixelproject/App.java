@@ -8,6 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.security.AlgorithmConstraints;
+import java.security.AllPermission;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
@@ -110,7 +112,7 @@ public class App
         // ===========================================================
         // get all items that have museum data and store them in a map
         ItemsModel allItems = new ItemsModel();
-        Set<String> setA = new HashSet<>();
+        Set<String> allItemsSet = new HashSet<>();
         try {
 
             URI itemsUrl = new URI("https://api.hypixel.net/resources/skyblock/items");
@@ -127,12 +129,12 @@ public class App
             for (int i = 0; i < allItems.items.length; i++) { // maybe change naming little confusing (changed maybe change again idk)
                 if (allItems.items[i].museum_data != null && !allItems.items[i].museum_data.type.equals("ARMOR_SETS")) {
                     // System.out.println(allItems.items[i].name + " | XP: " + allItems.items[i].museum_data.donation_xp);   // remove print 
-                    setA.add(allItems.items[i].id);
+                    allItemsSet.add(allItems.items[i].id);
                 } else if (allItems.items[i].museum_data != null) {
                     for (Map.Entry<String, Integer> entry : allItems.items[i].museum_data.armor_set_donation_xp.entrySet()) {
                         // System.out.println(allItems.items[i].name + " | Set: " + entry.getKey() + " | XP: " + entry.getValue());  // remove print 
                         // Makes a map entry and set it to the entry set of the given item
-                        setA.add(entry.getKey());
+                        allItemsSet.add(entry.getKey());
                     }
                 }
                 // Armor sets dont have regular donation xp they have set xp, 
@@ -147,7 +149,7 @@ public class App
                 // Now merge both sets into one hash map to get all musuem items with their given set name (if exist) and xp
                 // if it has armor_set_donation_xp then map that to the set name else if it has donation_xp then map it to the item name 
             }
-            for (String str : setA) {
+            for (String str : allItemsSet) {
               //  System.out.println(str);
             } 
         } catch (URISyntaxException | IOException | InterruptedException e) {
@@ -157,7 +159,7 @@ public class App
         // ===========================================================
         // compare to usernames museum and get missing items
         MembersModel membersModel = new MembersModel();
-        Set<String> setB = new HashSet<>();
+        Set<String> donatedItemsSet = new HashSet<>();
         try {
            // need to get players musuem items stored in a map then compare to the allItems map
            String url = "https://api.hypixel.net/v2/skyblock/museum?profile=" + userProfileId;
@@ -172,7 +174,7 @@ public class App
             String body = response.body();  
             membersModel = gson.fromJson(body, MembersModel.class);
             // check how to do if multiple memberes donated items (use refraction on apple) (it works)
-            // add for to add to setB
+            // add for to add to donatedItemsSet
             // Only need member IDs and item names
             for (Map.Entry<String, DonatedItemsModel> entry : membersModel.members.entrySet()) {
                 String memberId = entry.getKey();
@@ -182,22 +184,79 @@ public class App
                 // System.out.println("Items:");
                 for (String itemName : donated.items.keySet()) {
                     // System.out.println(" - " + itemName);
-                    setB.add(itemName);
+                    donatedItemsSet.add(itemName);
                 }
             }
 
-            for (String str : setB) {
-               // System.out.println(str);
+            for (String str : donatedItemsSet) {
+                // System.out.println(str);
             }
 
-        setA.removeAll(setB); // removes items the player/s have donated 
-        
-        for (String str : setA) {
-            System.out.println(str);
-        }
         } catch (URISyntaxException | IOException | InterruptedException e) {
             System.err.println(e.getMessage());
         }
+
+        donatedItemsSet.forEach(System.out::println);
+        // ========= remove and find missing items ============== //
+        Set<String> missing = new HashSet<>(allItemsSet); // this may not be needed if so just replace with allItemsSet
+        // vars ^^ =================
+        System.out.println("missing before ==========================");
+        missing.removeAll(donatedItemsSet); // removes items the player/s directly have donated
+        missing.forEach(System.out::println);
+
+        // Now for each still-missing item, remove it if any ancestor was donated
+        for (ItemsDataModel item : allItems.items) {
+            // skip if not in missing (i.e. already donated)
+            if (!missing.contains(item.id))
+                continue;
+            // skip if no parent info
+            if (item.museum_data == null || item.museum_data.parent == null)
+                continue;
+
+            // track seen ancestors to avoid cycles
+            Set<String> seen = new HashSet<>();
+            // get this item's immediate parent
+            String parentId = item.museum_data.parent.get(item.id);
+
+            while (parentId != null && seen.add(parentId)) {
+                // if an ancestor was donated, drop this item from missing
+                if (donatedItemsSet.contains(parentId)) {
+                    missing.remove(item.id);
+                    break;
+                }
+                // find the model object for this parentId
+                ItemsDataModel parentItem = null;                                     // something is still wrong here FIX
+                for (ItemsDataModel cand : allItems.items) {
+                    if (cand.id.equals(parentId)) {
+                        parentItem = cand;
+                        break;
+                    }
+                }
+                // stop if we can't climb further
+                if (parentItem == null || parentItem.museum_data == null || parentItem.museum_data.parent == null) {
+                    break;
+                }
+                // climb one level up using the current parentId as the key
+                parentId = parentItem.museum_data.parent.get(parentId);
+            }
+        }
+
+        System.out.println("Missing after =========================");
+        // print out missing
+        if (missing.isEmpty()) {
+            System.out.println("missing set is null");
+        } else {
+            for (String str : missing) {
+                for (ItemsDataModel item : allItems.items) {
+                    if (str.equals(item.id)) {
+                        System.out.println(item.name);
+                    }
+                }
+            }
+        }
+
+
+        // ====================================================== //
         sc.close();
     }
 }
